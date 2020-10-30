@@ -89,7 +89,7 @@ void ShiftTransitionIdAndAddBlanks(fst::StdVectorFst *fst) {
 
     // add self loop arcs to state
     for (int32 k = 0; k < self_loop_arcs.size(); ++k) {
-      self_loop_arcs[k]++;
+      self_loop_arcs[k].ilabel++;
       fst->AddArc(state, self_loop_arcs[k]);
     }
   }
