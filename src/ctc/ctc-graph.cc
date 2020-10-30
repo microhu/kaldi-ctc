@@ -48,7 +48,23 @@ void ShiftTransitionIdAndAddBlanks(fst::StdVectorFst *fst) {
 
       if (arc.nextstate == state) {  // self-loop
         KALDI_ASSERT(arc.ilabel != 0);
-        self_loop_arcs.push_back(arc);
+
+        if (arc.olabel == 0)
+        {
+          self_loop_arcs.push_back(arc);
+        }
+        else
+        {
+          // split the self-loop arc to a separate node
+          int32 self_loop_new_state = fst->AddState();
+          arc.next_state = self_loop_new_state;
+          fst->AddArc(state, arc);
+
+          fst::StdArc new_self_loop_eps_arc(arc.ilabel, 0, fst::StdArc::Weight::One(), self_loop_new_state);
+          fst->AddArc(self_loop_new_state, new_self_loop_eps_arc);
+          epsilon_blank_arc.nextstate = state;
+          fst->AddArc(self_loop_new_state, epsilon_blank_arc);
+        }
       }
     }
 
