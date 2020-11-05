@@ -37,18 +37,37 @@ void ShiftTransitionIdAndAddBlanks(fst::StdVectorFst *fst) {
 
   int32 num_states = fst->NumStates();
   fst::StdArc epsilon_blank_arc(0, 0, fst::StdArc::Weight::One(), 0);
+
   for (int32 state = 0; state < num_states; state++) {
     std::vector<fst::StdArc> self_loop_arcs;
     for (IterType aiter(fst, state); !aiter.Done(); aiter.Next()) {
       fst::StdArc arc(aiter.Value());
-      if (arc.ilabel != 0) {
-        arc.ilabel++;
-        aiter.SetValue(arc);
-      }
-
       if (arc.nextstate == state) {  // self-loop
         KALDI_ASSERT(arc.ilabel != 0);
-        self_loop_arcs.push_back(arc);
+        if (arc.olabel == 0)
+        {
+          self_loop_arcs.push_back(arc);
+          continue;
+        }
+        else
+        {
+          // split the self-loop arc to a separate node
+          // the state will be iterated and have its ilabel++ later
+          int32 self_loop_new_state = fst->AddState();
+          arc.nextstate = self_loop_new_state;
+          fst->AddArc(state, arc);
+
+          fst::StdArc new_self_loop_eps_arc(arc.ilabel, 0, fst::StdArc::Weight::One(), self_loop_new_state);
+          fst->AddArc(self_loop_new_state, new_self_loop_eps_arc);
+          epsilon_blank_arc.nextstate = state;
+          fst->AddArc(self_loop_new_state, epsilon_blank_arc);
+        }
+      }
+
+      if (arc.ilabel != 0)
+      {
+        arc.ilabel++;
+        aiter.SetValue(arc);
       }
     }
 
@@ -70,6 +89,7 @@ void ShiftTransitionIdAndAddBlanks(fst::StdVectorFst *fst) {
 
     // add self loop arcs to state
     for (int32 k = 0; k < self_loop_arcs.size(); ++k) {
+      self_loop_arcs[k].ilabel++;
       fst->AddArc(state, self_loop_arcs[k]);
     }
   }
